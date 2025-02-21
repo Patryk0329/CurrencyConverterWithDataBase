@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -43,9 +44,12 @@ namespace CurrencyConverterWithDataBase
 
         public void mycon()
         {
-            String Conn = ConfigurationManager.ConnectionStrings["ConnectionString"].ConnectionString;
-            con = new SqlConnection(Conn);
-            con.Open();
+            if (con.State == ConnectionState.Closed)
+            {
+                String Conn = ConfigurationManager.ConnectionStrings["ConnectionString"].ConnectionString;
+                con = new SqlConnection(Conn);
+                con.Open();
+            }
         }
         private void BindCurrency()
         {
@@ -167,9 +171,7 @@ namespace CurrencyConverterWithDataBase
             }
             else
             {
-                ConvertedValue = (double.Parse(cmbFromCurrency.SelectedValue.ToString()) * double.Parse(txtCurrency.Text))
-                                / double.Parse(cmbToCurrency.SelectedValue.ToString());
-
+                ConvertedValue = FromAmount * double.Parse(txtCurrency.Text, CultureInfo.InvariantCulture) / ToAmount;
                 lblCurrency.Content = cmbToCurrency.Text + " " + ConvertedValue.ToString("N3");
             }
         }
@@ -235,7 +237,7 @@ namespace CurrencyConverterWithDataBase
             }
             catch(Exception ex)
             {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"An error occurred: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -298,6 +300,46 @@ namespace CurrencyConverterWithDataBase
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void cmbFromCurrency_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdateCurrencyAmount(cmbFromCurrency, ref FromAmount);
+        }
+
+        private void cmbToCurrency_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdateCurrencyAmount(cmbToCurrency, ref ToAmount);
+        }
+
+        private void UpdateCurrencyAmount(ComboBox comboBox, ref double amount)
+        {
+            try
+            {
+                if (comboBox.SelectedValue != null && int.Parse(comboBox.SelectedValue.ToString()) != 0 && comboBox.SelectedIndex != 0)
+                {
+                    int currencyId = int.Parse(comboBox.SelectedValue.ToString());
+
+                    mycon();
+                    DataTable dt = new DataTable();
+
+                    cmd = new SqlCommand("SELECT Amount FROM Currency_Master WHERE Id = @CurrencyId", con);
+                    cmd.CommandType = CommandType.Text;
+                    cmd.Parameters.AddWithValue("@CurrencyId", currencyId);
+
+                    da = new SqlDataAdapter(cmd);
+                    da.Fill(dt);
+                    if (dt != null && dt.Rows.Count > 0)
+                    {
+                        amount = double.Parse(dt.Rows[0]["Amount"].ToString());
+                    }
+                    con.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"An error occurred while updating currency amount: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }
