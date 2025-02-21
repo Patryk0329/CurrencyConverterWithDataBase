@@ -142,7 +142,7 @@ namespace CurrencyConverterWithDataBase
             double ConvertedValue;
             if (txtCurrency.Text == null || txtCurrency.Text.Trim() == "")
             {
-                MessageBox.Show("Please Enter Currency", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Please Enter Amount", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
                 txtCurrency.Focus();
                 return;
             }
@@ -183,13 +183,13 @@ namespace CurrencyConverterWithDataBase
         {
             try
             {
-                if(txtAmount.Text == null || txtAmount.Text.Trim()=="")
+                if(string.IsNullOrWhiteSpace(txtAmount.Text))
                 {
                     MessageBox.Show("Please Enter Amount", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
                     txtAmount.Focus();
                     return;
                 }
-                else if ( txtCurrencyName.Text == null || txtCurrencyName.Text.Trim() == "")
+                else if (string.IsNullOrWhiteSpace(txtCurrencyName.Text))
                 {
                     MessageBox.Show("Please Enter Currency Name", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
                     txtCurrencyName.Focus();
@@ -253,7 +253,52 @@ namespace CurrencyConverterWithDataBase
 
         private void dgvCurrency_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
         {
-           
+            try
+            {
+                DataGrid grd = (DataGrid)sender;
+
+                DataRowView row_selected = grd.CurrentItem as DataRowView;
+                if (row_selected != null)
+                {
+                    if (dgvCurrency.Items.Count > 0)
+                    {
+                        if (grd.SelectedCells.Count > 0)
+                        {
+                            CurrencyId = Int32.Parse(row_selected["Id"].ToString());
+
+                            if (grd.SelectedCells[0].Column.DisplayIndex == 0)
+                            {
+                                txtAmount.Text = row_selected["Amount"].ToString();
+                                txtCurrencyName.Text = row_selected["CurrencyName"].ToString();
+                                btnSave.Content = "Update";
+                            }
+
+                            if (grd.SelectedCells[0].Column.DisplayIndex == 1)
+                            {
+                                if (MessageBox.Show("Are you sure you want to delete ?", "Information", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                                {
+                                    mycon();
+                                    DataTable dt = new DataTable();
+
+                                    cmd = new SqlCommand("DELETE FROM Currency_Master WHERE Id = @Id", con);
+                                    cmd.CommandType = CommandType.Text;
+
+                                    cmd.Parameters.AddWithValue("@Id", CurrencyId);
+                                    cmd.ExecuteNonQuery();
+                                    con.Close();
+
+                                    MessageBox.Show("Data deleted successfully", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+                                    ClearMaster();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 }
